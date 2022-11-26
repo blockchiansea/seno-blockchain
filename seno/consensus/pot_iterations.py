@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from seno.consensus.constants import ConsensusConstants
 from seno.consensus.pos_quality import _expected_plot_size
 from seno.types.blockchain_format.sized_bytes import bytes32

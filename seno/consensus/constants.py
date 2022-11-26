@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 import dataclasses
+import logging
+from typing import Any
 
 from seno.types.blockchain_format.sized_bytes import bytes32
 from seno.util.byte_types import hexstr_to_bytes
 from seno.util.ints import uint8, uint32, uint64, uint128
+
+log = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -34,14 +40,14 @@ class ConsensusConstants:
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     GENESIS_CHALLENGE: bytes32
-    # Forks of chia should change this value to provide replay attack protection
+    # Forks of seno should change this value to provide replay attack protection
     AGG_SIG_ME_ADDITIONAL_DATA: bytes
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: bytes32  # The block at height must pay out to this farmer puzzle hash
     MAX_VDF_WITNESS_SIZE: int  # The maximum number of classgroup elements within an n-wesolowski proof
     # Size of mempool = 10x the size of block
     MEMPOOL_BLOCK_BUFFER: int
-    # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
+    # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M seno.
     MAX_COIN_AMOUNT: int
     # Max block cost in clvm cost units
     MAX_BLOCK_COST_CLVM: int
@@ -51,22 +57,29 @@ class ConsensusConstants:
     WEIGHT_PROOF_THRESHOLD: uint8
     WEIGHT_PROOF_RECENT_BLOCKS: uint32
     MAX_BLOCK_COUNT_PER_REQUESTS: uint32
-    INITIAL_FREEZE_END_TIMESTAMP: uint64
     BLOCKS_CACHE_SIZE: uint32
-    NETWORK_TYPE: int
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
+    POOL_SUB_SLOT_ITERS: uint64
 
-    def replace(self, **changes) -> "ConsensusConstants":
+    def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
 
-    def replace_str_to_bytes(self, **changes) -> "ConsensusConstants":
+    def replace_str_to_bytes(self, **changes: Any) -> "ConsensusConstants":
         """
         Overrides str (hex) values with bytes.
         """
 
+        filtered_changes = {}
         for k, v in changes.items():
+            if not hasattr(self, k):
+                # NETWORK_TYPE used to be present in default config, but has been removed
+                if k not in ["NETWORK_TYPE"]:
+                    log.warning(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
+                continue
             if isinstance(v, str):
-                changes[k] = hexstr_to_bytes(v)
+                filtered_changes[k] = hexstr_to_bytes(v)
+            else:
+                filtered_changes[k] = v
 
-        return dataclasses.replace(self, **changes)
+        return dataclasses.replace(self, **filtered_changes)

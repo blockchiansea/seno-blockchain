@@ -3,27 +3,27 @@ import cProfile
 import logging
 import pathlib
 
-from seno.util.path import mkdir, path_from_root
+from seno.util.path import path_from_root
 
 # to use the profiler, enable it config file, "enable_profiler"
-# the output will be printed to your seno root path, e.g. ~/.seno2/mainnet/profile/
+# the output will be printed to your seno root path, e.g. ~/.seno/mainnet/profile/
 # to analyze the profile, run:
 
-#   python seno/utils/profiler.py ~/.seno2/mainnet/profile | less -r
+#   python seno/utils/profiler.py ~/.seno/mainnet/profile | less -r
 
 # this will print CPU usage of the seno full node main thread at 1 second increments.
 # find a time window of interest and analyze the profile file (which are in pstats format).
 
 # for example:
 
-#   python seno/utils/profiler.py ~/.seno2/mainnet/profile 10 20
+#   python seno/utils/profiler.py ~/.seno/mainnet/profile 10 20
 
 
-async def profile_task(root_path: pathlib.Path, log: logging.Logger) -> None:
+async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
 
-    profile_dir = path_from_root(root_path, "profile")
+    profile_dir = path_from_root(root_path, f"profile-{service}")
     log.info("Starting profiler. saving to %s" % profile_dir)
-    mkdir(profile_dir)
+    profile_dir.mkdir(parents=True, exist_ok=True)
 
     counter = 0
 
@@ -77,7 +77,10 @@ if __name__ == "__main__":
 
                     # TODO: to support windows and MacOS, extend this to a list of function known to sleep the process
                     # e.g. WaitForMultipleObjects or kqueue
-                    if "{method 'poll' of 'select.epoll' objects}" in columns[5]:
+                    if (
+                        "{method 'poll' of 'select.epoll' objects}" in columns[5]
+                        or "method 'control' of 'select.kqueue' objects" in columns[5]
+                    ):
                         # cumulative time
                         sleep += float(columns[3])
 

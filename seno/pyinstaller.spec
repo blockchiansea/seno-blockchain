@@ -1,13 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 import importlib
+import os
 import pathlib
 import platform
+import sysconfig
 
 from pkg_resources import get_distribution
 
 from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 THIS_IS_WINDOWS = platform.system().lower().startswith("win")
+THIS_IS_MAC = platform.system().lower().startswith("darwin")
 
 ROOT = pathlib.Path(importlib.import_module("seno").__file__).absolute().parent.parent
 
@@ -53,6 +56,7 @@ version_data = copy_metadata(get_distribution("seno-blockchain"))[0]
 block_cipher = None
 
 SERVERS = [
+    "data_layer",
     "wallet",
     "full_node",
     "harvester",
@@ -71,6 +75,29 @@ hiddenimports.extend(keyring_imports)
 
 binaries = []
 
+if os.path.exists(f"{ROOT}/madmax/seno_plot"):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/seno_plot",
+            "madmax"
+        )
+    ])
+
+if os.path.exists(f"{ROOT}/madmax/seno_plot_k34",):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/seno_plot_k34",
+            "madmax"
+        )
+    ])
+
+if os.path.exists(f"{ROOT}/bladebit/bladebit"):
+    binaries.extend([
+        (
+            f"{ROOT}/bladebit/bladebit",
+            "bladebit"
+        )
+    ])
 
 if THIS_IS_WINDOWS:
     hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
@@ -81,7 +108,7 @@ if THIS_IS_WINDOWS:
 
 if THIS_IS_WINDOWS:
     seno_mod = importlib.import_module("seno")
-    dll_paths = ROOT / "*.dll"
+    dll_paths = pathlib.Path(sysconfig.get_path("platlib")) / "*.dll"
 
     binaries = [
         (
@@ -159,6 +186,10 @@ add_binary("daemon", f"{ROOT}/seno/daemon/server.py", COLLECT_ARGS)
 
 for server in SERVERS:
     add_binary(f"start_{server}", f"{ROOT}/seno/server/start_{server}.py", COLLECT_ARGS)
+
+add_binary("start_crawler", f"{ROOT}/seno/seeder/start_crawler.py", COLLECT_ARGS)
+add_binary("start_seeder", f"{ROOT}/seno/seeder/dns_server.py", COLLECT_ARGS)
+add_binary("start_data_layer_http", f"{ROOT}/seno/data_layer/data_layer_server.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,
